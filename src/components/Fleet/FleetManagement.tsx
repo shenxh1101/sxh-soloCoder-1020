@@ -22,7 +22,7 @@ export const FleetManagement: React.FC = () => {
 
   const handleBuyShip = (shipType: 'small' | 'medium' | 'large') => {
     const config = shipConfigs.find(c => c.type === shipType);
-    if (!config || gold < config.cost) {
+    if (!config) {
       audioManager.playError();
       return;
     }
@@ -42,8 +42,7 @@ export const FleetManagement: React.FC = () => {
       upgrades: { loading: 1, engine: 1, hull: 1 }
     };
 
-    addShip(newShip);
-    audioManager.playSuccess();
+    addShip(newShip, config.cost);
   };
 
   const handleAssignCaptain = (captainId: string) => {

@@ -29,22 +29,20 @@ export const CargoCard: React.FC<CargoCardProps> = ({ cargo, warehouses }) => {
   const totalUsed = warehouses.reduce((sum, w) => sum + w.level * 200, 0) - 
     warehouses.reduce((sum, w) => sum + (w.level * 200 - 50), 0);
 
+  const transferOutCost = transferAmount * 10;
+  const transferInCost = Math.floor(transferAmount * cargo.value * 0.1);
+
   const handleTransferOut = () => {
-    if (transferAmount <= cargo.weight && gold >= transferAmount * 10) {
-      removeCargo(cargo.id, transferAmount);
-      audioManager.playClick();
-    }
+    removeCargo(cargo.id, transferAmount, transferOutCost);
   };
 
   const handleTransferIn = () => {
-    if (gold >= transferAmount * cargo.value * 0.1) {
-      addCargo({
-        ...cargo,
-        id: `stock_${Date.now()}`,
-        weight: transferAmount
-      });
-      audioManager.playSuccess();
-    }
+    const newCargo = {
+      ...cargo,
+      id: `stock_${Date.now()}`,
+      weight: transferAmount
+    };
+    addCargo(newCargo, transferInCost);
   };
 
   const unitPrice = cargo.value;
@@ -121,19 +119,19 @@ export const CargoCard: React.FC<CargoCardProps> = ({ cargo, warehouses }) => {
               size="sm"
               variant="secondary"
               onClick={handleTransferOut}
-              disabled={transferAmount > cargo.weight}
+              disabled={transferAmount > cargo.weight || gold < transferOutCost}
             >
               <TrendingDown className="w-4 h-4 mr-1" />
-              调出 💰{transferAmount * 10}
+              调出 💰{transferOutCost}
             </PixelButton>
             <PixelButton
               size="sm"
               variant="success"
               onClick={handleTransferIn}
-              disabled={gold < transferAmount * unitPrice * 0.1}
+              disabled={gold < transferInCost}
             >
               <TrendingUp className="w-4 h-4 mr-1" />
-              调入 💰{Math.floor(transferAmount * unitPrice * 0.1)}
+              调入 💰{transferInCost}
             </PixelButton>
           </div>
         </div>

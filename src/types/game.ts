@@ -79,6 +79,7 @@ export interface Order {
   deadline?: number;
   status: OrderStatus;
   difficulty: Difficulty;
+  completedDay?: number;
 }
 
 export interface AchievementCondition {

@@ -13,16 +13,26 @@ import { audioManager } from '../../utils/audio';
 type TabType = 'overview' | 'achievements' | 'collections';
 
 export const SettlementAchievements: React.FC = () => {
-  const { achievements, dailyStats, gold, day, orders, ships, buildings } = useGameStore();
+  const { achievements, dailyStats, gold, day, orders, ships, buildings, captains } = useGameStore();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
 
   const unlockedCount = achievements.filter(a => a.unlocked).length;
   const totalAchievements = achievements.length;
 
-  const totalIncome = dailyStats.reduce((sum, s) => sum + s.income, 0);
-  const totalExpense = dailyStats.reduce((sum, s) => sum + s.expense, 0);
+  const todaysCompletedOrders = orders.filter(o => o.status === 'completed' && o.completedDay === day);
+  const todaysIncome = todaysCompletedOrders.reduce((sum, o) => sum + o.reward, 0);
+  const todaysOrdersCount = todaysCompletedOrders.length;
+  const todaysExpense = captains.filter(c => c.hired).reduce((sum, c) => sum + c.salary, 0);
+  const todaysProfit = todaysIncome - todaysExpense;
+
+  const historicalIncome = dailyStats.reduce((sum, s) => sum + s.income, 0);
+  const historicalExpense = dailyStats.reduce((sum, s) => sum + s.expense, 0);
+  const historicalOrders = dailyStats.reduce((sum, s) => sum + s.ordersCompleted, 0);
+
+  const totalIncome = historicalIncome + todaysIncome;
+  const totalExpense = historicalExpense + (dailyStats.length > 0 ? todaysExpense : 0);
   const totalProfit = totalIncome - totalExpense;
-  const totalOrders = dailyStats.reduce((sum, s) => sum + s.ordersCompleted, 0);
+  const totalOrders = historicalOrders + todaysOrdersCount;
 
   const tabs: { key: TabType; label: string; icon: React.ReactNode }[] = [
     { key: 'overview', label: '经营概览', icon: <BarChart3 className="w-4 h-4" /> },

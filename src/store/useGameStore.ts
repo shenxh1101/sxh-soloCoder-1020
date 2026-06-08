@@ -15,13 +15,14 @@ interface GameStore extends GameState {
   hireCaptain: (captainId: string) => boolean;
   fireCaptain: (captainId: string) => void;
   assignCaptainToShip: (captainId: string, shipId: string) => void;
-  addShip: (ship: Ship) => void;
+  addShip: (ship: Ship, cost: number) => boolean;
   updateShip: (shipId: string, updates: Partial<Ship>) => void;
+  upgradeShip: (shipId: string, upgradeKey: 'loading' | 'engine' | 'hull', cost: number) => boolean;
   acceptOrder: (orderId: string, shipId: string) => boolean;
   completeOrder: (orderId: string) => void;
   failOrder: (orderId: string) => void;
-  addCargo: (cargo: CargoItem) => void;
-  removeCargo: (cargoId: string, weight: number) => void;
+  addCargo: (cargo: CargoItem, cost: number) => boolean;
+  removeCargo: (cargoId: string, weight: number, cost: number) => boolean;
   unlockAchievement: (achievementId: string) => void;
   updateAchievementProgress: (type: string, value: number) => void;
   addDailyStat: (stat: DailyStat) => void;
@@ -148,11 +149,21 @@ export const useGameStore = create<GameStore>((set, get) => {
       saveAndNotify();
     },
 
-    addShip: (ship) => {
-      set((state) => ({ ships: [...state.ships, ship] }));
+    addShip: (ship, cost) => {
+      const state = get();
+      if (state.gold < cost) {
+        audioManager.playError();
+        return false;
+      }
+
+      set((s) => ({
+        gold: s.gold - cost,
+        ships: [...s.ships, ship]
+      }));
       get().updateAchievementProgress('ships', get().ships.length);
       audioManager.playSuccess();
       saveAndNotify();
+      return true;
     },
 
     updateShip: (shipId, updates) => {
@@ -162,6 +173,40 @@ export const useGameStore = create<GameStore>((set, get) => {
         )
       }));
       saveAndNotify();
+    },
+
+    upgradeShip: (shipId, upgradeKey, cost) => {
+      const state = get();
+      const ship = state.ships.find(s => s.id === shipId);
+      
+      if (!ship || state.gold < cost) {
+        audioManager.playError();
+        return false;
+      }
+
+      const currentLevel = ship.upgrades[upgradeKey];
+      if (currentLevel >= 3) {
+        audioManager.playError();
+        return false;
+      }
+
+      set((s) => ({
+        gold: s.gold - cost,
+        ships: s.ships.map((s) =>
+          s.id === shipId
+            ? {
+                ...s,
+                upgrades: {
+                  ...s.upgrades,
+                  [upgradeKey]: currentLevel + 1
+                }
+              }
+            : s
+        )
+      }));
+      audioManager.playSuccess();
+      saveAndNotify();
+      return true;
     },
 
     acceptOrder: (orderId, shipId) => {
@@ -205,9 +250,11 @@ export const useGameStore = create<GameStore>((set, get) => {
       const order = state.orders.find((o) => o.id === orderId);
       if (!order) return;
 
+      const currentDay = state.day;
+      
       set((s) => ({
         orders: s.orders.map((o) =>
-          o.id === orderId ? { ...o, status: 'completed' as const } : o
+          o.id === orderId ? { ...o, status: 'completed' as const, completedDay: currentDay } : o
         ),
         ships: s.ships.map((s) =>
           s.currentOrder === orderId
@@ -238,20 +285,42 @@ export const useGameStore = create<GameStore>((set, get) => {
       saveAndNotify();
     },
 
-    addCargo: (cargo) => {
-      set((state) => ({ cargo: [...state.cargo, cargo] }));
+    addCargo: (cargo, cost) => {
+      const state = get();
+      if (state.gold < cost) {
+        audioManager.playError();
+        return false;
+      }
+
+      set((s) => ({
+        gold: s.gold - cost,
+        cargo: [...s.cargo, cargo]
+      }));
+      audioManager.playSuccess();
       saveAndNotify();
+      return true;
     },
 
-    removeCargo: (cargoId, weight) => {
-      set((state) => ({
-        cargo: state.cargo
+    removeCargo: (cargoId, weight, cost) => {
+      const state = get();
+      const cargo = state.cargo.find(c => c.id === cargoId);
+      
+      if (!cargo || cargo.weight < weight || state.gold < cost) {
+        audioManager.playError();
+        return false;
+      }
+
+      set((s) => ({
+        gold: s.gold - cost,
+        cargo: s.cargo
           .map((c) =>
             c.id === cargoId ? { ...c, weight: c.weight - weight } : c
           )
           .filter((c) => c.weight > 0)
       }));
+      audioManager.playClick();
       saveAndNotify();
+      return true;
     },
 
     unlockAchievement: (achievementId) => {
@@ -336,30 +405,35 @@ export const useGameStore = create<GameStore>((set, get) => {
 
     advanceDay: () => {
       const state = get();
+      const currentDay = state.day;
+      
       const dailyExpense = state.captains
         .filter((c) => c.hired)
         .reduce((sum, c) => sum + c.salary, 0);
       
-      const dailyIncome = state.orders
-        .filter((o) => o.status === 'completed' && state.dailyStats.every((s) => s.day !== state.day))
-        .reduce((sum, o) => sum + o.reward, 0);
+      const todaysCompletedOrders = state.orders.filter(
+        (o) => o.status === 'completed' && o.completedDay === currentDay
+      );
+      
+      const dailyIncome = todaysCompletedOrders.reduce((sum, o) => sum + o.reward, 0);
+      const todaysOrdersCount = todaysCompletedOrders.length;
 
-      const newDay = state.day + 1;
+      const newDay = currentDay + 1;
       const profit = dailyIncome - dailyExpense;
+
+      get().addDailyStat({
+        day: currentDay,
+        income: dailyIncome,
+        expense: dailyExpense,
+        ordersCompleted: todaysOrdersCount,
+        profit
+      });
 
       set((s) => ({
         day: newDay,
         gold: s.gold - dailyExpense,
         weather: ['sunny', 'rainy', 'stormy'][Math.floor(Math.random() * 3)] as GameState['weather']
       }));
-
-      get().addDailyStat({
-        day: newDay,
-        income: dailyIncome,
-        expense: dailyExpense,
-        ordersCompleted: state.orders.filter((o) => o.status === 'completed').length,
-        profit
-      });
 
       get().updateAchievementProgress('days', 1);
       audioManager.playWave();

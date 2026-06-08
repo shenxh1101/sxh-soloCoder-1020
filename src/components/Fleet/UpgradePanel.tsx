@@ -9,7 +9,7 @@ import { upgradeCosts } from '../../data/mockData';
 import { audioManager } from '../../utils/audio';
 
 export const UpgradePanel: React.FC = () => {
-  const { ships, gold, updateShip } = useGameStore();
+  const { ships, gold, upgradeShip } = useGameStore();
   const { selectedShipId } = useUIStore();
 
   const selectedShip = ships.find(s => s.id === selectedShipId);
@@ -35,18 +35,7 @@ export const UpgradePanel: React.FC = () => {
     if (currentLevel >= 3) return;
     
     const cost = upgradeCosts[upgradeKey][currentLevel + 1];
-    if (gold < cost) {
-      audioManager.playError();
-      return;
-    }
-
-    updateShip(selectedShip.id, {
-      upgrades: {
-        ...selectedShip.upgrades,
-        [upgradeKey]: currentLevel + 1
-      }
-    });
-    audioManager.playSuccess();
+    upgradeShip(selectedShip.id, upgradeKey, cost);
   };
 
   return (
