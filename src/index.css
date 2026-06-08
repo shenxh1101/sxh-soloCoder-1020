@@ -1,0 +1,94 @@
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: 'VT323', monospace;
+  line-height: 1.5;
+  font-weight: 400;
+  color-scheme: dark;
+  color: #f0e6d2;
+  background-color: #0f1729;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: none;
+  -moz-osx-font-smoothing: grayscale;
+  image-rendering: pixelated;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: #0f1729;
+}
+
+.font-pixel {
+  font-family: 'Press Start 2P', cursive;
+}
+
+@layer utilities {
+  .pixel-border {
+    border-style: solid;
+    border-width: 3px;
+    border-color: #4a6fa5 #1a2744 #1a2744 #4a6fa5;
+    box-shadow: 2px 2px 0 #0a1724;
+  }
+  
+  .pixel-border-wood {
+    border-style: solid;
+    border-width: 3px;
+    border-color: #5a3a1a #2a1505 #2a1505 #5a3a1a;
+    box-shadow: 2px 2px 0 #1a0500;
+  }
+  
+  .pixel-shadow {
+    box-shadow: 
+      3px 3px 0 #0a1724,
+      4px 4px 0 rgba(0, 0, 0, 0.2);
+  }
+  
+  .pixel-btn {
+    image-rendering: pixelated;
+    transition: all 0.1s;
+  }
+  
+  .pixel-btn:hover {
+    transform: translate(-1px, -1px);
+  }
+  
+  .pixel-btn:active {
+    transform: translate(1px, 1px);
+  }
+}
+
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: #1a2744;
+  border: 2px solid #0a1724;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a6fa5;
+  border: 2px solid #1a2744;
+  box-shadow: inset 1px 1px 0 #6a8fc5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #6a8fc5;
+}
+
+canvas {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
